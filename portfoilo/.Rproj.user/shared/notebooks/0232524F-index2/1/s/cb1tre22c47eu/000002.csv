@@ -1,0 +1,65 @@
+"0",""
+"0","header=readxl::read_excel(""/Users/butterflyer/Desktop/OneDrive - AIOS/GU/ANLY 503 VIS/project/mig_2017.xls"",skip = 4,n_max=3, col_names = FALSE) "
+"2","New names:
+* `` -> ...1
+* `` -> ...2
+* `` -> ...3
+* `` -> ...4
+* `` -> ...5
+* ...
+"
+"0","# reshape the header df and filter the useful col "
+"0","header= data.frame(t(rbind(header, colnames(header)))) %>% "
+"0","        filter(X3  == ""Estimate"" &  !is.na(X2))%>% "
+"0","        slice(c(2:52,54))"
+"0",""
+"0","# get useful col number "
+"0","col = header   %>% .$X4 %>%as.vector"
+"0","col = append(col,""...1"",0)"
+"0",""
+"0",""
+"0","df_mig=readxl::read_excel(""/Users/butterflyer/Desktop/OneDrive - AIOS/GU/ANLY 503 VIS/project/mig_2017.xls"",skip = 4,col_names = FALSE)"
+"2","New names:
+* `` -> ...1
+* `` -> ...2
+* `` -> ...3
+* `` -> ...4
+* `` -> ...5
+* ...
+"
+"0","df_mig = df_mig %>% select(col)%>%"
+"0","            setnames(old = as.vector(header$X4), as.vector( header$X2)) %>%"
+"0","            drop_na(""...1"") %>%"
+"0","            filter( ...1 != ""Current residence in"")%>%"
+"0","            slice(2:53) %>%"
+"0","            column_to_rownames('...1')"
+"2","Note: Using an external vector in selections is ambiguous.
+[34mℹ[39m Use `all_of(col)` instead of `col` to silence this message.
+[34mℹ[39m See <https://tidyselect.r-lib.org/reference/faq-external-vector.html>.
+[90mThis message is displayed once per session.[39m
+"
+"0","# get the new data frame with 3 columns: source, target and count"
+"0","df2 = data.frame(reshape2::melt(as.matrix(df_mig), value.name = ""count"", varnames=c('target', 'source')))"
+"0","# convert na to 0"
+"0","df2[df2 == ""N/A""] = 0"
+"0","df2$count = as.numeric(as.character(df2$count))"
+"0",""
+"0","df2$target = c(state.abb,""DC"")[match(df2$target,c(state.name,""District of Columbia""))]"
+"0","df2$source = c(state.abb,""DC"")[match(df2$source,c(state.name,""District of Columbia""))]"
+"0",""
+"0","df3 = df2[df2$source %in% c(""DC"",""CA"",""HI"",""MA""),]"
+"0",""
+"0","# top 10 destination states"
+"0","df4 = tibble::as_tibble(df3) %>%"
+"0","  group_by(source) %>%"
+"0","  arrange(count, .by_group = TRUE) %>%"
+"0","  top_n(5)"
+"2","Selecting by count
+"
+"0","# convert state name to abbr"
+"0",""
+"0","# re-order the cols"
+"0","df4 = df4[,c(""source"",""target"",""count"")]"
+"0",""
+"0",""
+"0",""

@@ -1,0 +1,5 @@
+"0","
+# import data
+df = pd.read_csv(""accounts_analytical.csv"")
+df2 = pd.read_csv(""transactions.csv"")
+"

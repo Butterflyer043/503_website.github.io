@@ -1,0 +1,21 @@
+---
+title: "World of Butterflyer"
+---
+
+Hello, world!
+
+This is my personal visualization gallery website. The website also containes Mechine leanring note. Feel free to click the link for more detaild. 
+
+
+
+[Dashboard Presentation](index2.html)
+
+[Geospatial PLot and code](A6_2.html)
+
+[Netwoek PLot and code](networks.html)
+
+[EDA](A5.html)
+
+[Statistical Learning Note](Statistical Learning Note.html)
+
+[Time Series Note](TS-note.html)

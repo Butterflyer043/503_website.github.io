@@ -1,0 +1,226 @@
+---
+title: "a6"
+output: html_document
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning=FALSE)
+```
+
+## 1. Data extraction
+
+
+i. You will extract from the datasets the proportion of the vote won by either the Democratic or Republican candidate for each county for each of the three elections.
+
+```{r}
+library(reticulate)
+use_python("/opt/anaconda3/bin/python",required=TRUE)
+```
+
+
+```{python}
+# I select Republican
+import pandas as pd
+import re
+# read data
+vote=pd.read_csv("countypres_2000-2016.csv")
+# filter out the correct yr and party
+vote=vote[vote['year'].isin([2008,2012,2016]) & vote['party'].isin(['republican'])]
+# compute vote rate
+vote['rate']=vote['candidatevotes']/vote['totalvotes']
+vote['rate']=round(vote['rate']*100,1)
+# select useful cols
+vote2 = vote.filter(['year','state','county','FIPS','rate'], axis=1)
+```
+
+
+ii. You will also extract the unemployment rates for each county for each of the three election years
+```{python}
+# extract useful column from unemp 
+unempolyment = pd.read_excel('Unemployment.xls', skiprows = range(0, 7))
+# extract useful column from unemp 
+unempolyment = unempolyment.loc[1:,['FIPStxt', 'Stabr', 'area_name', 'Unemployment_rate_2008', 'Unemployment_rate_2012', 'Unemployment_rate_2016']]
+```
+
+
+
+## 2. Create choropleths
+
+
+```{r message=FALSE, warning=FALSE}
+# import lib for plot
+library(ggplot2)
+library(ggpubr)
+library(gridExtra)
+```
+
+```{r message=FALSE, warning=FALSE}
+# handling the map data 
+US <- sf::st_read("tl_2019_us_county_1/tl_2019_us_county.shp")
+US = data.frame(US)
+# split to 3 states
+tx = subset(US, STATEFP=="48")
+pa = subset(US, STATEFP=="42")
+ca = subset(US, STATEFP=="06")
+```
+
+i. The proportion of the vote won by your chosen candidate in each county for each of the three elections, based on a map of US counties represented in the shapefiles mentioned above (3 choropleths)
+
+```{r}
+# prepare the employment rate  data, split the data to 3 state
+vote = py$vote2
+colnames(vote)[4] = 'GEOID'
+vote$GEOID=as.integer(vote$GEOID)
+vote$GEOID=formatC(vote$GEOID, width=5, flag="0")
+
+#split the data to 3 state
+v_tx = subset(vote, state=="Texas")
+v_pa = subset(vote, state=="Pennsylvania")
+v_ca = subset(vote, state=="California")
+
+# merge vote rate with shapefile
+map_v_tx = merge(v_tx,tx, by="GEOID")
+map_v_pa = merge(v_pa,pa, by="GEOID")
+map_v_ca = merge(v_ca,ca, by="GEOID")
+```
+
+```{r fig.height=5, fig.width=10}
+# plot the graph
+ggplot()+ 
+  geom_sf(data=map_v_tx,aes(geometry = geometry,fill = rate))+
+  # separate year  
+  facet_wrap(~year, nrow =1)+
+  # customize color
+  scale_fill_viridis_c(alpha = 0.9,option="magma")+
+  # add labels
+  labs(title = 'Republican vote rate in Texas(in %)')+ 
+  #manage the legend
+  theme(legend.title=element_blank(),legend.position = "bottom")
+```
+```{r fig.height=3.3, fig.width=10}
+# plot the graph
+ggplot()+ 
+  geom_sf(data=map_v_pa,aes(geometry = geometry,fill = rate))+
+  # separate year  
+  facet_wrap(~year, nrow =1)+
+  # customize color
+  scale_fill_viridis_c(alpha =0.9,option="magma")+
+  # add labels
+  labs(title = 'Republican vote rate in Pennsylvania(in %)')+ 
+  #manage the legend
+  theme(legend.title=element_blank(),legend.position = "bottom")
+```
+
+```{r fig.height=5, fig.width=10}
+# plot the graph
+ggplot()+ 
+  geom_sf(data=map_v_ca,aes(geometry = geometry,fill = rate))+
+  # separate year  
+  facet_wrap(~year, nrow =1)+
+  # customize color
+  scale_fill_viridis_c(alpha = .9,option="magma")+
+  # add labels
+  labs(title = 'Republican vote rate in California(in %)')+ 
+  #manage the legend
+  theme(legend.title=element_blank(),legend.position = "bottom")
+```
+
+ii. The unemployment rate in each county for each of the three election years (2008, 2012, 2016) using the US map of counties based on the same shapefiles as above. (3 choropleths)
+
+```{r}
+# prepare the employment rate  data
+unemp = py$unempolyment
+colnames(unemp)[1] = 'GEOID'
+colnames(unemp)[4] = "UnemploymentRate"
+unemp$GEOID=as.integer(unemp$GEOID)
+unemp$GEOID=formatC(unemp$GEOID, width=5, flag="0")
+
+#split the data to 3 state
+ue_tx = subset(unemp, Stabr=="TX")
+ue_pa = subset(unemp, Stabr=="PA")
+ue_ca = subset(unemp, Stabr=="CA")
+
+# merge unemp rate with shapefile
+map_une_tx = merge(ue_tx,tx, by="GEOID")
+map_une_pa = merge(ue_pa,pa, by="GEOID")
+map_une_ca = merge(ue_ca,ca, by="GEOID")
+```
+
+
+
+```{r fig.height=5, fig.width=10}
+# plot graph
+vis1 = ggplot(data = map_une_tx,aes(geometry = geometry)) + 
+  #color by unemploy rate
+  geom_sf( aes(fill = UnemploymentRate))+ 
+  #customize the color
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  #add title 
+  labs(title="2008")+  
+  #manage the legend
+  theme(legend.title=element_blank(),legend.position = "bottom")
+
+vis2 = ggplot(data = map_une_tx,aes(geometry = geometry)) + 
+  geom_sf(data = map_une_tx, aes(fill = Unemployment_rate_2012))+ 
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  labs(title="2012")+  theme(legend.title=element_blank(),legend.position = "bottom")
+
+
+vis3 = ggplot(data = map_une_tx,aes(geometry = geometry)) + 
+  geom_sf(data = map_une_tx, aes(fill = Unemployment_rate_2016))+ 
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  labs(title="2016")+ theme(legend.title=element_blank(),legend.position = "bottom")
+
+# merge 3 plot in one
+ggarrange(vis1, vis2,vis3,ncol = 3, nrow = 1, legend = "bottom",labels="Unemplotment rate in Texas (in %)")
+
+```
+
+
+
+```{r fig.height=3.3, fig.width=10, paged.print=FALSE}
+vis4 = ggplot(data = map_une_pa,aes(geometry = geometry)) + 
+  geom_sf( aes(fill = UnemploymentRate))+ 
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  labs(title="2008")+theme(legend.title=element_blank(),legend.position = "bottom")
+
+vis5 = ggplot(data = map_une_pa,aes(geometry = geometry)) + 
+  geom_sf(data = map_une_pa, aes(fill = Unemployment_rate_2012))+ 
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  labs(title="2012")+theme(legend.title=element_blank(),legend.position = "bottom")
+
+
+vis6 = ggplot(data = map_une_pa,aes(geometry = geometry)) + 
+  geom_sf(data = map_une_pa, aes(fill = Unemployment_rate_2016))+ 
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  labs(title="2016")+theme(legend.title=element_blank(),legend.position = "bottom")
+# merge 3 plot in one
+ggarrange(vis4, vis5,vis6, ncol = 3, legend = "bottom",labels="Unemplotment rate in Pennsylvania (in %)")
+```
+
+
+
+```{r fig.height=5, fig.width=10}
+
+vis7 = ggplot(data = map_une_ca,aes(geometry = geometry)) + 
+  geom_sf( aes(fill = UnemploymentRate))+ 
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  labs(title="2008")+theme(legend.title=element_blank(),legend.position = "bottom")
+
+vis8 = ggplot(data = map_une_ca,aes(geometry = geometry)) + 
+  geom_sf(data = map_une_ca, aes(fill = Unemployment_rate_2012))+ 
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  labs(title="2012")+theme(legend.title=element_blank(),legend.position = "bottom")
+
+
+vis9 = ggplot(data = map_une_ca,aes(geometry = geometry)) + 
+  geom_sf(data = map_une_ca, aes(fill = Unemployment_rate_2016))+ 
+  scale_fill_viridis_c(trans = "sqrt", alpha = .9)+
+  labs(title="2016")+theme(legend.title=element_blank(),legend.position = "bottom")
+# merge 3 plot in one
+ggarrange(vis7, vis8,vis9,ncol = 3,labels="Unemplotment rate in California (in %)")
+
+
+```
+
+

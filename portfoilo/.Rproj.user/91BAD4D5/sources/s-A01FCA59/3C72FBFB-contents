@@ -1,0 +1,110 @@
+---
+title: "A5_1"
+author: "xl"
+date: "10/23/2020"
+output: html_document
+---
+
+1. Explore all accounts. Create visualizations that combine or these account characteristics:   
+a. Whether an account has a credit card or not    
+b. Whether an account has a loan or not    
+c. The average balance for the account    
+```{r}
+#knitr::opts_chunk$set(warning = FALSE,message = FALSE)
+
+library(reticulate)
+#mac environment 
+#py_config()
+#use_condaenv('r-reticulate',required=TRUE)
+use_python("/opt/anaconda3/bin/python",required=TRUE)
+
+```
+
+
+
+
+```{python}
+# import library
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pylab import *
+import matplotlib.colors as colors
+```
+
+```{python}
+
+# import data
+df = pd.read_csv("accounts_analytical.csv")
+df2 = pd.read_csv("transactions.csv")
+
+```
+
+```{python}
+# plot the Number of Credit Cards
+plt.figure(figsize=((10,8)))
+#set up color
+cmap = plt.cm.get_cmap('Set3', 10)(np.arange(10))
+fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(10,5))
+
+#set up data for credit_cards
+df['if_cr']= np.where(df['credit_cards'].isnull() , 'No','Yes')
+sum_cr = pd.DataFrame(df.credit_cards.value_counts(dropna=False)).reset_index()
+labels = ["No credit cards","1","2"]
+sizes = sum_cr.credit_cards
+explode = (0.1, 0, 0)
+# plot 1
+ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
+        shadow=True, startangle=90, colors=cmap)
+ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+ax1.set_title('If the account has credit cards')
+
+
+
+#set up data for loan
+df['if_loan']= np.where(df['loan_date'].isnull() , 'No','Yes')
+#df.loc[:,['if_loan','loan_date']]
+sum_loan = pd.DataFrame(df.if_loan.value_counts(dropna=False)).reset_index()
+
+labels2 = ["No","Yes"]
+sizes2 = sum_loan.if_loan
+explode2 = (0.1, 0)
+
+ax2.pie(sizes2, explode=explode2, labels=labels2, autopct='%1.1f%%',
+        shadow=True, startangle=90, colors=cmap)
+ax2.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+ax2.set_title('If the account has a loan.')
+
+plt.show()
+
+```
+
+```{python}
+# compute average balance
+avg_bal=pd.DataFrame(df2.groupby(['account_id']).mean()["balance"]).reset_index()
+df3 = pd.merge(df.loc[:,['account_id','if_loan','if_cr']], avg_bal, on='account_id')
+```
+
+
+```{python}
+# plot the hist of average balance
+plt.hist(avg_bal.balance, bins=25, edgecolor='white', linewidth=1,color="skyblue")  
+plt.xlabel('Average balance per account')
+plt.ylabel('Number of accounts')
+plt.show()
+```
+
+
+```{python}
+fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(10,5))
+result1 = pd.DataFrame(df3.groupby(['if_loan']).mean())
+result2 = pd.DataFrame(df3.groupby(['if_cr']).mean())
+fig.suptitle('Average Balance')
+ax1.bar(result1.index, result1['balance'],color=['skyblue',"steelblue"])
+ax1.set_title('If the account has a loan')
+ax2.bar(result2.index, result2['balance'],color=['skyblue',"steelblue"])
+ax2.set_title('If the  account has a credit cards')
+plt.show()
+```
+Most accounts (about 85%) do not have credit cards and loans. For the average balance of the accounts, most users have an average balance around \$20000-\$30000. For the accounts with loan, they are more likely to have a higher average balance then the accounts that don't have loan. Accounts with credit cards and accounts without credit cards have a small difference in average balance, it seems that whether there is a credit card has little correlation with average balance.
+

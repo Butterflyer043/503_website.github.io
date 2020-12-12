@@ -1,0 +1,7 @@
+"0","#table(is.na(c(state.abb,""DC"")[match(df2$target,c(state.name,""District of Columbia""))] ))"
+"0","circos.clear()"
+"0","chordDiagram(df4,  annotationTrack = c(""name"", ""grid""),"
+"0","             # re-order the graph"
+"0","             order = c(""CA"" ,""DC"", ""HI"", ""MA"", ""ID""  ,""NY"" ,""FL"", ""CO"" ,""OR"" ,""VA"",""NV"" ,""WA"" ,""RI"",""AZ"",""NC"", ""TX"" ,""NJ"",""PA"" ,""MA"", ""CA"", ""MD"" ,""UT"", ""ME"", ""CT"",  ""NH""),"
+"0","             # assign color"
+"0","             grid.col = c(DC=""#F8B195"", CA=""#F67280"",MA=""#6C5B7B"", HI=""#355C7D"",NC=""lightgrey"",WY=""lightgrey"",WA=""lightgrey"",AZ=""lightgrey"",FL=""lightgrey"",MD=""lightgrey"",CA=""lightgrey"",SC=""lightgrey"",VA=""lightgrey"",MA=""lightgrey"",RI=""lightgrey"",NH=""lightgrey"",TN=""lightgrey"",NJ=""lightgrey"",AR=""lightgrey"",GA=""lightgrey"",NY=""lightgrey"",OR=""lightgrey"",TX=""lightgrey"",MI=""lightgrey"",IA=""lightgrey"",IL=""lightgrey"",NV=""lightgrey"",NM=""lightgrey""),annotationTrackHeight = c(0.03, 0.01),transparency = 0.2,big.gap = 1)"

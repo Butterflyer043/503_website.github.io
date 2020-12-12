@@ -1,0 +1,531 @@
+---
+title: "Housing Market Report in 2017"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+
+# data cleaning lib
+library(tidyr)
+library(dplyr)
+library(data.table)
+library(tm)
+library(tibble)
+
+# data ggplot lib
+library(ggplot2)
+library(hrbrthemes)
+library(circlize)
+library(ggpubr)
+library(wordcloud2)
+library(viridis)
+
+# flexdashboard lib
+library(flexdashboard)
+library(plotly)
+
+set.seed(955)
+dat <- data.frame(cond = rep(c("A", "B"), each=10),
+                  xvar = 1:20 + rnorm(20,sd=3),
+                  yvar = 1:20 + rnorm(20,sd=3))
+
+# Make some noisily increasing data
+df = read.csv("State_time_series.csv")
+#df = read.csv("County_time_series.csv")
+#write.csv(Your DataFrame,"County_time_series.csv", row.names = FALSE)
+
+df = df[df$RegionName != "UnitedStates",]
+df$Date = as.Date(df$Date )
+df = df %>% filter(Date >= as.Date("2017-01-01")) 
+# add space before upper case: NewYork => New York
+df$RegionName = gsub("([a-z])([A-Z])", "\\1 \\2",df$RegionName)
+df$RegionName = c(state.abb,"DC")[match(df$RegionName,c(state.name,"Districtof Columbia"))]
+
+
+df2 = read.csv("County2_time_series.csv")
+df2$Date = as.Date(df2$Date)
+```
+About
+=======================================================================
+Row {data-width=500}
+-----------------------------------------------------------------------
+
+### Abstract
+
+
+
+
+
+![](image.jpeg)
+This project is a study of the U.S. housing market in 2017, mainly focusing on the index: 'list price (or asking price) for homes listed on [Zillow](https://www.zillow.com/) per square foot' and 'Rental price per square foot of homes listed for rent'. Aims to study the housing market from multiple dimensions and present the results in a reader-friendly way.
+
+On the page 'Exploratory', the project shows an overview of the data of these two indicators. At the same time, it also compared the difference in selling price and rent between different types of houses, as well as the difference between the actual price and the estimated house value.
+
+On the page trends', the project explores the data on time level, presenting the changes in list price and rental price from the beginning of 2016 to the end of 2017 and forecasting them. Through the text analysis of the monthly report (published by Zillow), the project found the most popular topic in the housing market in 2017 and conducted further research.
+
+As for the page geographical Trends', this is a geographical exploration of list price and rental price.
+
+Row {data-width=500}
+-----------------------------------------------------------------------
+### Dataset
+All the data are downloaded from or scraped from the:
+
+1. [Zillow Website](Zillow.com) 
+    - Zillow's Economic Research Team collects, cleans and publishes housing and economic data from a variety of public and proprietary sources.
+    - The dataset contains 82 columns. The variables include: Housing price, housing type, regional data, timestampe, etc. 
+
+2. [Census Bureau Website]( https://www.census.gov/data/tables/time-series/demo/geographic-mobility/state-to-state-migration.html)
+    - The Census Bureau is part of the U.S. Department of Commerce and the mission is to serve as the nation's leading provider of quality data about its people and economy.
+    - The dataset is about migration flows between states.
+
+### Technology 
+This project mainly used R language, and created Dashboard to presents the result by the "flexdashboard" package.
+
+The package applied:
+
+* data cleaning package
+  - tidyr
+  - dplyr
+  - data.table
+  - tm
+  - tibble
+* Visualization package:
+  - ggplot2
+  - hrbrthemes
+  - circlize
+  - ggpubr
+  - wordcloud2
+  - viridis
+* flexdashboard package:
+  - flexdashboard
+  - plotly
+  
+The model applied:
+
+* Sarima Time Series Prediction Model
+
+Exploratory
+=======================================================================
+
+Row {data-width=50}
+-----------------------------------------------------------------------
+
+### Number of Sold house
+
+```{r fig.height=5, fig.width=5}
+n = sum(as.integer(df$Sale_Counts_Seas_Adj),na.rm=T)
+valueBox(
+  format(as.integer(n), nsmall=1, big.mark=","), icon = "ion-android-home")
+```
+
+### Avg House Price Per Sqft
+```{r}
+n = mean(as.numeric(df$MedianListingPricePerSqft_AllHomes),na.rm=T)
+valueBox(
+  format(round(as.numeric(n), 1), nsmall=1, big.mark=","),color = "#fdb827")
+```
+
+
+### Avg Rental Price Per Sqft
+```{r}
+n = mean(as.numeric(df$MedianRentalPricePerSqft_AllHomes),na.rm=T)
+valueBox(
+  format(round(as.numeric(n), 1), nsmall=1, big.mark=","),color = "#d35d6e")
+```
+
+### Pct of Increasing Homes Price
+```{r}
+n =  mean(as.numeric(df$PctOfHomesIncreasingInValues_AllHomes),na.rm=T)
+gauge(as.integer(n+1), min = 0, max = 100, symbol = '%')
+```
+
+### Pct of Sell For Gain
+```{r}
+n =  mean(as.numeric(df$PctOfHomesSellingForGain_AllHomes),na.rm=T)
+gauge(as.integer(n), min = 0, max = 100, symbol = '%',sectors = gaugeSectors(
+  success = c(0, 40),warning = c(40, 95),danger = c(95, 100)))
+```
+
+Row {data-width=700}
+-----------------------------------------------------------------------
+
+### Distribution of All Types House Price and Rental Price (Pre Sqft){data-height=500}
+
+```{r fig.height=2, fig.width=5, message=FALSE, warning=FALSE, include=FALSE}
+
+vis1 = ggplot(data=df %>% select (c(11,52)) %>%  drop_na %>%
+  rename( Listing.Price=MedianListingPricePerSqft_AllHomes, House.Value=ZHVIPerSqft_AllHomes) %>%melt , aes(x=as.numeric(value), group=variable, fill=variable)) +
+    geom_histogram(color="#e9ecef", alpha=.6) +
+    theme_ipsum() + theme(legend.position="bottom") + theme(legend.title = element_blank(),axis.title.x = element_blank())  + labs(y = "Frequency")
+
+
+vis2 = ggplot(data=df %>% select (c(35,80)) %>% drop_na %>%
+  rename( Rental.Price=MedianRentalPricePerSqft_AllHomes,  Market.Rate=ZriPerSqft_AllHomes) %>% melt , aes(x=as.numeric(value), group=variable, fill=variable)) +
+    geom_histogram(color="#e9ecef", alpha=.6) + scale_fill_manual(values=c("#69b3a2", "#404080"))+ theme_ipsum() +
+  theme(legend.position="bottom")+ 
+  theme(legend.title = element_blank(),axis.title.x = element_blank())
+
+#subplot(vis1, vis2,shareY = TRUE)%>% layout(legend = list(orientation = 'h',y=-0.2))
+ggarrange(vis1, vis2,ncol = 2, nrow = 1)
+```
+```{r}
+subplot(vis1, vis2,shareY = TRUE)%>% layout(legend = list(orientation = 'h',y=-0.4))
+```
+
+
+
+
+### House Price and Rental Price By Various Types (Pre Sqft){data-height=500}
+
+```{r fig.height=2, fig.width=5, message=FALSE, warning=FALSE, include=FALSE}
+df_temp = df %>% group_by(RegionName) %>% 
+  # group by state
+  summarise_all(funs(mean), na.rm = TRUE) %>% 
+  select(c(6:10,12:14,30:34,36,37,39)) %>%
+  summarise_all(funs(mean), na.rm = TRUE)%>%
+  melt %>%
+  separate(variable, c("SellorRent", "type"), "_")%>%
+  mutate(SR = case_when(SellorRent == "MedianListingPricePerSqft" ~ "Listing Price",
+                         SellorRent == "MedianRentalPricePerSqft" ~ "Rental Price"))
+
+p1=ggplot(df_temp[df_temp$SR=="Listing Price",], aes(fill=type, y=value, x=SR)) + 
+    geom_bar(position="dodge", stat="identity", alpha=0.6)+
+  facet_wrap(~SellorRent, scales = "free")+ theme_ipsum()+
+  geom_text(aes(label =substr(as.character(value),1,3)), position=position_dodge(width=0.9), vjust=1.5)+
+  theme( legend.title =element_blank(),axis.title.x = element_blank(),axis.title.y = element_blank(),strip.text.x = element_blank()) +
+  theme(legend.position="bottom")
+
+p2=ggplot(df_temp[df_temp$SR=="Rental Price",], aes(fill=type, y=value, x=SR)) + 
+    geom_bar(position="dodge", stat="identity", alpha=0.6)+
+  facet_wrap(~SellorRent, scales = "free")+ theme_ipsum()+
+  geom_text(aes(label =substr(as.character(value),1,3)), position=position_dodge(width=0.9), vjust=1.5)+
+  theme( legend.title =element_blank(),axis.title.x = element_blank(),axis.title.y = element_blank(),strip.text.x = element_blank()) +
+  theme(legend.position="bottom")
+```
+
+```{r}
+#ggplotly(p)%>% layout(legend = list(orientation = 'h',y=-0.2))
+subplot(p1,style(p2, showlegend = FALSE))%>% layout(legend = list(orientation = 'h',y=-0.4))
+```
+
+
+ 
+Row{data-width=200}
+-----------------------------------------------------------------------
+
+### Overview
+In 2017, more than four million houses were sold in the United States, and 94% of sellers profited from these transactions. The average annual listing house price in 2017 was \$157.6 per square foot, and the average annual rent was \$1.1 per square foot. For both sold and rental houses, distribution shapes of actual and estimated prices are very similar concentrate on relatively low price. And real price distribution shows more left-skewed,  indicating that the actual prices are higher than their estimated prices And people who rent a house are less likely to be interested in the high-value house. (see the figure on the top left for more details). Moreover, different house types have different selling prices and rents. Compared with other house types, 1bedroom and 3bedroom houses are more expensive.(see the figure on the bottom left for more details)
+
+
+
+
+
+Trends
+=======================================================================
+
+Row{data-width=500}
+-----------------------------------------------------------------------
+
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+df_temp2 = read.csv("State_time_series.csv")
+df_temp2 = df_temp2[df_temp2$RegionName != "UnitedStates",]
+df_temp2$Date = as.Date(df_temp2$Date )
+df_temp2 = df_temp2 %>% filter(Date >= as.Date("2016-01-01")) 
+
+df_temp2 = df_temp2 %>% group_by(Date) %>% 
+  # group by date
+  summarise_all(funs(mean), na.rm = TRUE) %>%
+  select(c(1,3,4,11,52,35,80))%>%
+  rename( Listing.Price=MedianListingPricePerSqft_AllHomes, House.Value=ZHVIPerSqft_AllHomes, Rental.Price=MedianRentalPricePerSqft_AllHomes,  Market.Rate=ZriPerSqft_AllHomes,Days.On.Selling.List=DaysOnZillow_AllHomes,House.Number.On.Inventory=InventorySeasonallyAdjusted_AllHomes)
+
+df_temp2
+```
+
+
+### House Inventory Status
+```{r message=FALSE, warning=FALSE}
+ay <- list(
+  overlaying = "y",
+  side = "right"
+)
+fig <- plot_ly()
+fig <- fig %>% add_lines(x = df_temp2$Date, y = df_temp2$House.Number.On.Inventory, name = "Number.Of.House.On.Inventory",color ="#8b5c7c")
+fig <- fig %>% add_lines(x = df_temp2$Date, y = df_temp2$Days.On.Selling.List, name = "Days.On.Selling.List",color ="#69b3a2", yaxis = "y2")
+fig <- fig %>% layout(legend = list(orientation = 'h',y=-0.5),yaxis2 = ay)
+
+fig
+```
+
+### Listing and Rental Price Pre Sqft by Time 
+```{r message=FALSE, warning=FALSE}
+
+
+p3=ggplot(df_temp2 %>% select (c(1,4,5)) %>% melt(id="Date"), aes(x = Date)) + 
+  geom_line(aes(y=value,colour=variable,group=variable), size = 0.5,alpha=0.6) +
+  scale_x_date(date_breaks = "3 month", date_labels = "%b.%y")+ theme_ipsum()+
+  scale_color_manual(values=c("#583d72","#799cbc"))+
+  rremove('xlab')+rremove("ylab")+theme(legend.position = "bottom" ,legend.title =element_blank(),axis.title.x = element_blank(),axis.title.y = element_blank(),strip.text.x = element_blank()) 
+
+p4=ggplot(df_temp2 %>% select (c(1,6,7)) %>% melt(id="Date"), aes(x = Date)) + 
+  geom_line(aes(y=value,colour=variable,group=variable), size = 0.5,alpha=0.6) +
+  scale_x_date(date_breaks = "3 month", date_labels = "%b.%y")+ theme_ipsum()+
+  scale_color_manual(values=c("#c49ccb","#e96eaa"))+
+  rremove('xlab')+rremove("ylab")+theme(legend.position = "bottom", legend.title =element_blank(),axis.title.x = element_blank(),axis.title.y = element_blank(),strip.text.x = element_blank()) 
+
+
+#ggplotly(p)%>% layout(legend = list(orientation = 'h',y=-0.2))
+subplot(p3,p4,shareX = T , nrows = 2)%>% layout(legend = list(orientation = 'h',y=-0.4))
+
+```
+
+
+
+Row{data-width=500}
+-----------------------------------------------------------------------
+
+
+### Word Clouds of Monthly Report{data-height=450}
+
+```{r include=FALSE}
+text <- paste(readLines("Market_Report.txt"), collapse = " ")
+text_tidy <- gsub(pattern = "\\W",replace=" ",text)
+text_tidy2 <- gsub(pattern = "\\d",replace=" ",text_tidy)
+
+text_tidy2 <- tolower(text_tidy2)
+text_tidy2 <- removeWords(text_tidy2,stopwords())
+text_tidy2 <- gsub(pattern = "\\b[A-z]\\b{1}",replace=" ", text_tidy2 )
+text_tidy2 <- stripWhitespace(text_tidy2)
+
+textbag <- stringr::str_split(text_tidy2,pattern = "\\s+")
+textbag <- unlist(textbag)
+txt_df = table(textbag) %>% as.data.frame()
+
+set.seed(201)
+rem = c("percent","zillow","median","market","just","annual","values",tolower(month.name),"home","year")
+txt_df = txt_df[!txt_df$textbag %in% rem,]
+```
+
+```{r fig.height=6, fig.width=7, include=FALSE}
+fig = wordcloud2(txt_df[txt_df$Freq>2,],shape="circle",size = .5,color = rep_len( c("#8b5c7c","#c49ccb","#f2caca","#583d72","	#799cbc","#9f5f80","#ff8e71","#e96eaa"), nrow(txt_df[txt_df$Freq>2,])))
+#fig
+fig
+```
+
+
+![](/Users/butterflyer/Desktop/OneDrive - AIOS/GU/ANLY 503 VIS/project/Rplot02.png)
+
+
+
+
+
+### Prediction of House Listing Price Pre Sqft, prediction is created by AutoSarima model{data-height=400}
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(forecast)
+library(lubridate)
+df_ts = read.csv("State_time_series.csv")
+df_ts = df_ts[df_ts$RegionName != "UnitedStates",]
+df_ts$Date = as.Date(df_ts$Date )
+df_ts = df_ts %>% filter(Date >= as.Date("2010-01-01")) 
+df_ts = df_ts %>% select(1,11) %>% group_by(Date) %>%  summarise_all(funs(mean), na.rm = TRUE) %>% rename( Listing.Price=MedianListingPricePerSqft_AllHomes)
+
+sarima.fit=auto.arima(df_ts$Listing.Price,seasonal = TRUE)
+pred.fit = forecast(sarima.fit,12)
+df_ts2 = df_ts %>% filter(Date >= as.Date("2015-01-01")) %>% select(1)
+df_plotpred = data.frame(date=c(df_ts2$Date,ymd("2018-01-31") %m+% months(0:11)),value = c(rep(NA,36),pred.fit$mean))
+df_plotpred['lower'] =  c(rep(NA,36),pred.fit$lower[,1])
+df_plotpred['upper'] = c(rep(NA,36),pred.fit$upper[,1])
+
+
+p=  ggplot() +
+    geom_line(data = df_ts %>% filter(Date >= as.Date("2015-01-01")),aes(Date,Listing.Price ),color="#583d72") +
+      geom_line(data=df_plotpred,aes(date, value),color="#583d72")+
+      geom_ribbon(data = df_plotpred,aes(x = date, ymax = upper, ymin = lower),fill="#583d72", alpha = 0.5) +
+  scale_x_date(date_breaks = "6 month", date_labels = "%b.%y")+ theme_ipsum()+rremove('xlab')+rremove('ylab')
+
+
+```
+```{r}
+ggplotly(style(p,showlegend=F))
+```
+
+
+
+
+Geographical Trends
+=======================================================================
+
+Row{data-width=400}
+-----------------------------------------------------------------------
+
+### Listing Price Per Sqft in Geographical Level{data-height=500}
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+state_df <- map_data("state")
+state_df$RegionName <- state.abb[state_df$region]
+state_df$RegionName <- c(state.abb,"DC")[match(state_df$region,c(tolower(state.name),"district of columbia"))]
+temp_df3=df %>% select(c(2,11,52,35,80))%>%
+  rename( Listing.Price=MedianListingPricePerSqft_AllHomes,
+ Rental.Price=MedianRentalPricePerSqft_AllHomes) %>%
+   group_by(RegionName) %>% 
+  summarise_all(funs(mean), na.rm = TRUE)
+
+temp_df3$Listing.Price[as.numeric(temp_df3$Listing.Price)>300] = 300
+
+map_df=full_join(temp_df3,state_df,by="RegionName")
+
+centroids <- data.frame(region=tolower(state.name), long=state.center$x, lat=state.center$y)
+centroids$abb<-state.abb[match(centroids$region,tolower(state.name))]
+centroids = centroids[(centroids$abb != "AK") & (centroids$abb != "HI") & (centroids$abb != "RI") & (centroids$abb != "DE"),]
+
+
+p6=ggplot(data=map_df) +
+  geom_polygon( aes(long, lat, group = group,fill = Listing.Price ), colour = "white") +
+  scale_fill_viridis(option="viridis",alpha = 0.7, direction = -1, na.value = "lightgrey") + 
+      geom_text(data=centroids,aes(x = long, y=lat, label = abb),color="black",size=2)+
+  coord_equal() +  cowplot::theme_map() +theme(legend.position = "bottom") +theme(legend.position = "bottom")
+
+p7=ggplot(data=map_df) +
+  geom_polygon( aes(long, lat, group = group,fill = Rental.Price ), colour = "white") +
+  scale_fill_viridis(option="inferno",alpha = 0.7, direction = -1, na.value = "lightgrey") + 
+      geom_text(data=centroids,aes(x = long, y=lat, label = abb),color="black",size=2)+
+  coord_equal() +  cowplot::theme_map() +theme(legend.position = "bottom") +theme(legend.position = "bottom")
+
+```
+
+```{r fig.height=5, fig.width=7}
+p6
+#ggplotly(p6, nrows = 2)%>% layout(legend = list(orientation = 'h',y=-0.5))
+
+```
+
+
+### Rate Per Sqft in Geographical Level{data-height=500}
+
+```{r fig.height=5, fig.width=7}
+p7
+#ggplotly(p7, nrows = 2)%>% layout(legend = list(orientation = 'h',y=-0.5))
+
+
+
+```
+ 
+
+ 
+ 
+Row{data-width=400}
+-----------------------------------------------------------------------
+### Cities with the highest outflows(DC, CA, HI, MA){data-height=500}
+
+```{r include=FALSE}
+
+header=readxl::read_excel("mig_2017.xls",skip = 4,n_max=3, col_names = FALSE) 
+# reshape the header df and filter the useful col 
+header= data.frame(t(rbind(header, colnames(header)))) %>% 
+        filter(X3  == "Estimate" &  !is.na(X2))%>% 
+        slice(c(2:52,54))
+
+# get useful col number 
+col = header   %>% .$X4 %>%as.vector
+col = append(col,"...1",0)
+
+
+df_mig=readxl::read_excel("mig_2017.xls",skip = 4,col_names = FALSE)
+
+df_mig = df_mig %>% select(col)%>%
+            setnames(old = as.vector(header$X4), as.vector( header$X2)) %>%
+            drop_na("...1") %>%
+            filter( ...1 != "Current residence in")%>%
+            slice(2:53) %>%
+            column_to_rownames('...1')
+
+# get the new data frame with 3 columns: source, target and count
+df2 = data.frame(reshape2::melt(as.matrix(df_mig), value.name = "count", varnames=c('target', 'source')))
+# convert na to 0
+df2[df2 == "N/A"] = 0
+df2$count = as.numeric(as.character(df2$count))
+
+df2$target = c(state.abb,"DC")[match(df2$target,c(state.name,"District of Columbia"))]
+df2$source = c(state.abb,"DC")[match(df2$source,c(state.name,"District of Columbia"))]
+
+df3 = df2[df2$source %in% c("DC","CA","HI","MA"),]
+
+# top 10 destination states
+df4 = tibble::as_tibble(df3) %>%
+  group_by(source) %>%
+  arrange(count, .by_group = TRUE) %>%
+  top_n(5)
+
+# convert state name to abbr
+
+# re-order the cols
+df4 = df4[,c("source","target","count")]
+
+
+
+```
+
+```{r}
+#table(is.na(c(state.abb,"DC")[match(df2$target,c(state.name,"District of Columbia"))] ))
+circos.clear()
+chordDiagram(df4,  annotationTrack = c("name", "grid"),
+             # re-order the graph
+             order = c("CA" ,"DC", "HI", "MA", "ID"  ,"NY" ,"FL", "CO" ,"OR" ,"VA","NV" ,"WA" ,"RI","AZ","NC", "TX" ,"NJ","PA" ,"MA", "CA", "MD" ,"UT", "ME", "CT",  "NH"),
+             # assign color
+             grid.col = c(DC="#F8B195", CA="#F67280",MA="#6C5B7B", HI="#355C7D",NC="lightgrey",WY="lightgrey",WA="lightgrey",AZ="lightgrey",FL="lightgrey",MD="lightgrey",CA="lightgrey",SC="lightgrey",VA="lightgrey",MA="lightgrey",RI="lightgrey",NH="lightgrey",TN="lightgrey",NJ="lightgrey",AR="lightgrey",GA="lightgrey",NY="lightgrey",OR="lightgrey",TX="lightgrey",MI="lightgrey",IA="lightgrey",IL="lightgrey",NV="lightgrey",NM="lightgrey"),annotationTrackHeight = c(0.03, 0.01),transparency = 0.2,big.gap = 1)
+
+
+```
+
+
+### Cities with the highest inflows(MS, MV, AR, IN){data-height=500}
+
+
+
+```{r message=FALSE, warning=FALSE}
+df3_2 = df2[df2$target %in% c("MS","WV","AR","IN"),]
+
+# top 10 destination states
+df4_2 = tibble::as_tibble(df3_2) %>%
+  group_by(target) %>%
+  arrange(count, .by_group = TRUE) %>%
+  top_n(5)
+
+# convert state name to abbr
+
+# re-order the cols
+df4_2 = df4_2[,c("target","source","count")]
+
+
+circos.clear()
+chordDiagram(df4_2,  annotationTrack = c("name", "grid"),
+             # re-order the graph
+             order = c("MS","WV","AR","IN","FL","AL","TN", "OK" ,"MO" ,"TX" ,"MI" ,"KY", "OH" , "MD","IL","LA", "PA", "VA"),
+             # assign color
+             grid.col = c(MS="#4e8d7c", WV="#f3f2da",AR="#045762", IN="#ea97ad",NC="lightgrey",WY="lightgrey",WA="lightgey",AZ="lightgrey",FL="lightgrey",MO="lightgrey",CA="lightgrey",SC="lightgrey",OK="lightgrey",MA="lightgrey",TX="lightgrey",PA="lightgrey",TN="lightgrey",NJ="lightgrey",AL="lightgrey",OH="lightgrey",LA="lightgrey",KY="lightgrey",MD="lightgrey",MI="lightgrey",IA="lightgrey",IL="lightgrey",MN="lightgrey",NM="lightgrey"),annotationTrackHeight = c(0.03, 0.01),transparency = 0.2,big.gap = 1)
+
+```
+
+Row{data-width=200}
+-----------------------------------------------------------------------
+### Insights Summary
+The housing market met an inventory issue in 2017. It not only reflected on the reports: the word "inventory" became a  popular term been discussed, but also reflected on inventory curve: the number of the house on inventory had a significant downward trend during 2017. Although house prices and rents had steadily increased month by month as usual. The falling inventories might accelerate this growth curve.
+
+Furthermore, the level of house prices and rents were similar in geographical distribution. The higher the house price, the more expensive the rent. House prices and rents were also highly correlated with the flow of people. For example, in CA, it has top 1 rental price and highest outflow rate. And the top 4 states that oeople are more likely to move to were the state that had relatively low house price.
+
+
+
+
+
+
+
+
+
+
+
+

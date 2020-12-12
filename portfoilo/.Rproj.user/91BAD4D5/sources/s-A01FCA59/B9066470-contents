@@ -1,0 +1,159 @@
+---
+title: "A5_3"
+author: "Xueyan Liu"
+date: "10/23/2020"
+output: html_document
+---
+
+
+## Is there a relationship between a good or bad loan and the time between an account is opened an the loan is created?
+
+```{r include=FALSE}
+df = read.csv("accounts_analytical.csv")
+
+df_loan = df[! is.na(df$loan_amount),]
+
+```
+```{r message=FALSE, warning=FALSE,include=FALSE}
+
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+```
+
+
+```{r message=FALSE, warning=FALSE,include=FALSE}
+# plot the histogram of loan
+options(scipen=999)
+p1 = ggplot(df_loan, aes(x=loan_amount)) + 
+  geom_histogram(color="black", fill="lightblue",bins = 12)+
+  labs(title="Histogram of loan amount")+
+  xlim(4980,590820)
+
+
+
+p2 = ggplot(df_loan, aes(x=loan_payment)) + 
+  geom_histogram(color="black", fill="lightblue",bins = 10)+
+  labs(title="Histogram of loan payment")
+
+
+ggarrange(p1,p2, ncol = 2, nrow = 1)
+```
+
+
+```{r include=FALSE}
+df_loan2 = df_loan[, c("account_id","loan_amount", "loan_payment", "loan_status", "loan_default", "loan_term")]
+df_loan3  = df_loan2  %>%
+  mutate(loans_status = case_when(loan_status == "expired"&loan_default == FALSE ~ 'The expired loan that was paid in full',
+                              loan_status == "expired"&loan_default == TRUE ~ 'The expired loan that was not paid in full',
+                              loan_status == "current"&loan_default == FALSE ~ 'The current loan where all payments are being made',
+                              loan_status == "current"&loan_default == TRUE ~ 'The current loan that not all payments being made'))%>%
+  mutate(loan_amount_gr = cut(df_loan2$loan_amount, breaks = c(4000,  80000, 160000, 230000, 300000,  590822), labels = c("[4-80)","[80-160)","[160-230)","[230-300)","[300-600)")))
+df_loan4 = df_loan3[,c("loan_amount_gr","loans_status")]
+
+# Customer and loan verification
+p3 = ggplot(data=df_loan4 , aes(x=loan_amount_gr, fill=loans_status))+ geom_bar()+
+    labs(title="Loan Status vs total loan amount")+xlab("Loan Amount (in thousands) ")+ theme(legend.position="right")
+```
+
+
+```{r include=FALSE}
+
+df_loan2 = df_loan[, c("account_id","loan_amount", "loan_payment", "loan_status", "loan_default", "loan_term")]
+df_loan3  = df_loan2  %>%
+  mutate(loans_status = case_when(loan_status == "expired"&loan_default == FALSE ~ 'The expired loan that was paid in full',
+                              loan_status == "expired"&loan_default == TRUE ~ 'The expired loan that was not paid in full',
+                              loan_status == "current"&loan_default == FALSE ~ 'The current loan where all payments are being made',
+                              loan_status == "current"&loan_default == TRUE ~ 'The current loan that not all payments being made'))%>%
+  mutate(loan_amount_gr = cut(df_loan2$loan_payment, breaks = c(0,2000,4000,6000,8000,10000), labels = c("[0,2)","[2-4)","[4-6)","[6-8)","[8-10)")))
+df_loan4 = df_loan3[,c("loan_amount_gr","loans_status")]
+
+# Customer and loan verification
+p4 = ggplot(data=df_loan4 , aes(x=loan_amount_gr, fill=loans_status))+ geom_bar()+
+    labs(title="Loan Status vs total loan payment")+xlab("Loan payment (in thousands) ")+ theme(legend.position="right")
+
+
+```
+
+
+```{r}
+# import lib and data
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(reshape2)
+
+df = read.csv("accounts_analytical.csv")
+
+df_loan = df[! is.na(df$loan_amount),]
+#df_loan
+```
+
+```{r}
+df_loan["days"] = as.numeric(as.Date(as.character(df_loan$loan_date), format="%Y-%m-%d") - as.Date(as.character(df_loan$acct_creation_date), format="%Y-%m-%d"))
+df_loan2 = df_loan[,c("loan_default","days","loan_amount")]
+```
+
+### Figure 1 
+#### The relationship between a good or bad loan and the time between an account is opened an the loan is created.
+```{r message=FALSE, warning=FALSE}
+#df_loan2 
+df_loan2 %>%
+  ggplot( aes(x=days, fill=loan_default)) +
+    geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
+    scale_fill_manual(values=c("#69b3a2", "#404080")) +
+    ylab("")
+```
+
+```{r}
+cor.test(as.numeric(df_loan2$days),as.numeric(df_loan2$loan_default),method = "pearson")
+```
+From the Figure 1, we can see that the distribution doesn't show a clear pattern, and there is no obvious difference in the days distribution of good and bad loans. In addition, by the result of pearson test：The small p value (0.0495≤ 0.05) is strong evidence that the null hypothesis is invalid, which means there is not correlation between days and loan defaulting status.
+
+
+
+## Is there a specific set of accounts that seem to be at higher or lower risk of defaulting?
+The plot that I created for question2 also help us to define the "good or bad loan", so I just quote the image here: based on the plot, we can tell that the large loan amount and payment, the large percentage of having a bad loan, indicating the higher or lower risk of defaulting. 
+
+### Figure 2
+```{r echo=FALSE, fig.height=6, fig.width=10}
+ggarrange(p3,p4, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right")
+
+```
+Furthermore I also analysis the transaction behaviour and I created a heatmap (Figure 3). By the heatmap, we can see whether the loan is good or bad shows relatively higher correlation with max balance. Thus I explore to figure 4, the people whose max balance is lower than 140000 and higher than 120000 are more likely to having a default loan. 
+
+
+### Figure 3
+```{r}
+# plot heatmap
+df_loan = df[! is.na(df$loan_amount),]
+df_loan3 = df_loan[,c(12,13:16,19,22,25,28,31,34,37,40,43,49,52,55,60)]
+cormat <- round(cor(df_loan3, method ="pearson"),2)
+melted_cormat <- melt(cormat)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) + 
+ geom_tile(color = "white")+
+ scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+   name="Pearson\nCorrelation")+
+    theme_minimal()+ 
+ theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+    size = 3, hjust = 1))
+
+
+
+```
+### Figure 4
+
+```{r message=FALSE, warning=FALSE}
+ df_loan3 %>%
+  ggplot( aes(x=max_balance, fill=loan_default)) +
+    geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
+    scale_fill_manual(values=c("#69b3a2","#404080")) +theme(legend.position="top")
+
+
+
+#ggarrange(a1,a2, ncol = 2, nrow = 1)
+
+```
+
+

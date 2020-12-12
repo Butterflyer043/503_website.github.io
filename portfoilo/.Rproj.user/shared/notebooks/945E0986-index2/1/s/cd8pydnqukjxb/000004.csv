@@ -1,0 +1,3 @@
+"0","n = mean(as.numeric(df$MedianRentalPricePerSqft_AllHomes),na.rm=T)"
+"0","valueBox("
+"0","  format(round(as.numeric(n), 1), nsmall=1, big.mark="",""),color = ""#d35d6e"")"

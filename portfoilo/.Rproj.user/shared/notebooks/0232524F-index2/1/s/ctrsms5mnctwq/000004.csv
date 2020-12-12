@@ -1,0 +1,3 @@
+"0","n = sum(as.integer(df$Sale_Counts_Seas_Adj),na.rm=T)"
+"0","valueBox("
+"0","  format(as.integer(n), nsmall=1, big.mark="",""), icon = ""ion-android-home"")"

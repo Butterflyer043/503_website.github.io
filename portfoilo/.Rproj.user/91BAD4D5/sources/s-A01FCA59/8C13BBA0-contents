@@ -1,0 +1,88 @@
+---
+title: "A5_2"
+author: "xl"
+date: "10/23/2020"
+output: html_document
+---
+
+What is the distribution of all loans and what are their characteristics?
+
+```{r}
+df = read.csv("accounts_analytical.csv")
+
+df_loan = df[! is.na(df$loan_amount),]
+
+```
+```{r message=FALSE, warning=FALSE}
+
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+```
+
+
+### Figure 1
+
+```{r message=FALSE, warning=FALSE}
+# plot the histogram of loan
+options(scipen=999)
+p1 = ggplot(df_loan, aes(x=loan_amount)) + 
+  geom_histogram(color="black", fill="lightblue",bins = 12)+
+  labs(title="Histogram of loan amount")+
+  xlim(4980,590820)
+
+
+
+p2 = ggplot(df_loan, aes(x=loan_payment)) + 
+  geom_histogram(color="black", fill="lightblue",bins = 10)+
+  labs(title="Histogram of loan payment")
+
+
+ggarrange(p1,p2, ncol = 2, nrow = 1)
+```
+
+
+
+
+```{r}
+df_loan2 = df_loan[, c("account_id","loan_amount", "loan_payment", "loan_status", "loan_default", "loan_term")]
+df_loan3  = df_loan2  %>%
+  mutate(loans_status = case_when(loan_status == "expired"&loan_default == FALSE ~ 'The expired loan that was paid in full',
+                              loan_status == "expired"&loan_default == TRUE ~ 'The expired loan that was not paid in full',
+                              loan_status == "current"&loan_default == FALSE ~ 'The current loan where all payments are being made',
+                              loan_status == "current"&loan_default == TRUE ~ 'The current loan that not all payments being made'))%>%
+  mutate(loan_amount_gr = cut(df_loan2$loan_amount, breaks = c(4000,  80000, 160000, 230000, 300000,  590822), labels = c("[4-80)","[80-160)","[160-230)","[230-300)","[300-600)")))
+df_loan4 = df_loan3[,c("loan_amount_gr","loans_status")]
+
+# Customer and loan verification
+p3 = ggplot(data=df_loan4 , aes(x=loan_amount_gr, fill=loans_status))+ geom_bar()+
+    labs(title="Loan Status vs total loan amount")+xlab("Loan Amount (in thousands) ")+ theme(legend.position="right")
+```
+
+
+
+```{r }
+
+df_loan2 = df_loan[, c("account_id","loan_amount", "loan_payment", "loan_status", "loan_default", "loan_term")]
+df_loan3  = df_loan2  %>%
+  mutate(loans_status = case_when(loan_status == "expired"&loan_default == FALSE ~ 'The expired loan that was paid in full',
+                              loan_status == "expired"&loan_default == TRUE ~ 'The expired loan that was not paid in full',
+                              loan_status == "current"&loan_default == FALSE ~ 'The current loan where all payments are being made',
+                              loan_status == "current"&loan_default == TRUE ~ 'The current loan that not all payments being made'))%>%
+  mutate(loan_amount_gr = cut(df_loan2$loan_payment, breaks = c(0,2000,4000,6000,8000,10000), labels = c("[0,2)","[2-4)","[4-6)","[6-8)","[8-10)")))
+df_loan4 = df_loan3[,c("loan_amount_gr","loans_status")]
+
+# Customer and loan verification
+p4 = ggplot(data=df_loan4 , aes(x=loan_amount_gr, fill=loans_status))+ geom_bar()+
+    labs(title="Loan Status vs total loan payment")+xlab("Loan payment (in thousands) ")+ theme(legend.position="right")
+
+
+```
+### Figure 2
+```{r fig.height=6, fig.width=10}
+ggarrange(p3,p4, ncol = 2, nrow = 1, common.legend = TRUE, legend = "right")
+
+```
+The distribution of loan amount (left plot of Figure1) shows right-shewed shape. For the most accounts that have loan, the  total amount that does not exceed 150,000.  And according to the right plot of Figure1, people are more likely to choose to pay about 2000 to 3000 per term. Based on the information that indicated on figure2. 
+Based on the information that indicated on figure2，we can conclude that the people who have large loan amount(300-600 thousand)  are more likely to fail to pay in full. As for the payment, the lower payment, the higher percentage of making a full payment.
+

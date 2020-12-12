@@ -1,0 +1,2 @@
+"0","fig = wordcloud2(txt_df[txt_df$Freq>2,],shape=""circle"",size = .5,color = rep_len( c(""#8b5c7c"",""#c49ccb"",""#f2caca"",""#583d72"",""	#799cbc"",""#9f5f80"",""#ff8e71"",""#e96eaa""), nrow(txt_df[txt_df$Freq>2,])))"
+"0","fig"
