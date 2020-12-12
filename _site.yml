@@ -17,8 +17,4 @@ navbar:
       href: TS-note.html
     - text: "Note_SL"
       href: Statistical Learning Note.html
-output:  
-  html_document:  
-    self_contained: no  
-    theme: flatly  
-    toc: true # adds a table of contents
+
