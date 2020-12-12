@@ -1,3 +1,0 @@
-"0","n =  mean(as.numeric(df$PctOfHomesSellingForGain_AllHomes),na.rm=T)"
-"0","gauge(as.integer(n), min = 0, max = 100, symbol = '%',sectors = gaugeSectors("
-"0","  success = c(0, 40),warning = c(40, 95),danger = c(95, 100)))"

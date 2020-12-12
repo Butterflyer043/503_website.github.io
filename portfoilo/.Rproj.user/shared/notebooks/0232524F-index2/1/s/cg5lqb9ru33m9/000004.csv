@@ -1,2 +1,0 @@
-"0","n =  mean(as.numeric(df$PctOfHomesIncreasingInValues_AllHomes),na.rm=T)"
-"0","gauge(as.integer(n+1), min = 0, max = 100, symbol = '%')"

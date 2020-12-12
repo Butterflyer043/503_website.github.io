@@ -1,3 +1,0 @@
-"0","# compute average balance
-avg_bal=pd.DataFrame(df2.groupby(['account_id']).mean()[""balance""]).reset_index()
-df3 = pd.merge(df.loc[:,['account_id','if_loan','if_cr']], avg_bal, on='account_id')"

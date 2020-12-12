@@ -1,9 +1,0 @@
-"0","fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(10,5))
-result1 = pd.DataFrame(df3.groupby(['if_loan']).mean())
-result2 = pd.DataFrame(df3.groupby(['if_cr']).mean())
-_ = fig.suptitle('Average Balance')
-_ = ax1.bar(result1.index, result1['balance'],color=['skyblue',""steelblue""])
-_ = ax1.set_title('If the account has a loan')
-_ = ax2.bar(result2.index, result2['balance'],color=['skyblue',""steelblue""])
-_ = ax2.set_title('If the  account has a credit cards')
-plt.show()"

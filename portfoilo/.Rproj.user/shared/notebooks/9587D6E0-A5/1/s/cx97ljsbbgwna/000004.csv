@@ -1,5 +1,0 @@
-"0","# plot the hist of average balance
-_ = plt.hist(avg_bal.balance, bins=25, edgecolor='white', linewidth=1,color=""skyblue"")  
-_ = plt.xlabel('Average balance per account')
-_ = plt.ylabel('Number of accounts')
-plt.show()"
